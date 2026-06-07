@@ -11,7 +11,7 @@ body{
     overflow:hidden;
     background:#050510;
     font-family:Arial;
-    color:rgb(255, 255, 255);
+    color:white;
 }
 
 canvas{
@@ -74,7 +74,8 @@ button{
 <div id="ui">
 Health: <span id="health">100</span><br>
 Score: <span id="score">0</span><br>
-Ammo: <span id="ammo">20</span>
+Ammo: <span id="ammo">20</span><br>
+<span id="invincibleText" style="color:violet;"></span>
 </div>
 
 <div id="reloadText"></div>
@@ -103,6 +104,8 @@ let ammo=20;
 let maxAmmo=20;
 let reloading=false;
 
+let invincible=false;
+
 let keys={};
 let bullets=[];
 let phantoms=[];
@@ -121,10 +124,18 @@ const healthUI=document.getElementById("health");
 const scoreUI=document.getElementById("score");
 const ammoUI=document.getElementById("ammo");
 const reloadText=document.getElementById("reloadText");
+const invText=document.getElementById("invincibleText");
 
 document.addEventListener("keydown",e=>{
     keys[e.key.toLowerCase()]=true;
+
     if(e.key.toLowerCase()==="r") reload();
+
+    // TOGGLE INVINCIBILITY
+    if(e.key.toLowerCase()==="m"){
+        invincible = !invincible;
+        invText.textContent = invincible ? "INVINCIBLE MODE" : "";
+    }
 });
 
 document.addEventListener("keyup",e=>{
@@ -139,7 +150,6 @@ canvas.addEventListener("mousemove",e=>{
 canvas.addEventListener("click",shoot);
 
 function shoot(){
-
     if(gameOver || reloading) return;
     if(ammo<=0) return;
 
@@ -158,7 +168,6 @@ function shoot(){
 }
 
 function reload(){
-
     if(reloading || ammo===maxAmmo || gameOver) return;
 
     reloading=true;
@@ -173,7 +182,6 @@ function reload(){
 }
 
 function spawnPhantom(){
-
     let side=Math.floor(Math.random()*4);
     let x,y;
 
@@ -195,7 +203,6 @@ function spawnPhantom(){
 setInterval(spawnPhantom,1000);
 
 function update(){
-
     if(gameOver) return;
 
     if(keys["w"]) player.y-=player.speed;
@@ -213,7 +220,6 @@ function update(){
     });
 
     phantoms.forEach((p,pi)=>{
-
         let angle=Math.atan2(player.y-p.y,player.x-p.x);
 
         p.x+=Math.cos(angle)*p.speed*speedMult;
@@ -241,8 +247,8 @@ function update(){
         let dx=player.x-p.x;
         let dy=player.y-p.y;
 
-        if(Math.sqrt(dx*dx+dy*dy)<player.size+p.size){
-
+        // DAMAGE ONLY IF NOT INVINCIBLE
+        if(Math.sqrt(dx*dx+dy*dy)<player.size+p.size && !invincible){
             player.health-=0.3;
             healthUI.textContent=Math.floor(player.health);
 
@@ -254,9 +260,6 @@ function update(){
         }
     });
 
-    document.getElementById("reloadText").textContent =
-        reloading ? "Reloading..." : "";
-
     if(score>=500 && !window.warned){
         window.warned=true;
         document.getElementById("warning").textContent="THE PHANTOMS HAVE EVOLVED!";
@@ -267,7 +270,6 @@ function update(){
 }
 
 function draw(){
-
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
     ctx.save();
@@ -275,13 +277,20 @@ function draw(){
     ctx.translate(player.x,player.y);
     ctx.rotate(angle);
 
-    ctx.fillStyle="cyan";
+    // PLAYER COLOR CHANGE WHEN INVINCIBLE
+    ctx.fillStyle = invincible ? "violet" : "cyan";
+
+    ctx.shadowBlur = invincible ? 20 : 0;
+    ctx.shadowColor = "violet";
+
     ctx.beginPath();
     ctx.moveTo(25,0);
     ctx.lineTo(-15,-12);
     ctx.lineTo(-15,12);
     ctx.fill();
     ctx.restore();
+
+    ctx.shadowBlur = 0;
 
     ctx.fillStyle="yellow";
     bullets.forEach(b=>{
@@ -307,13 +316,8 @@ function loop(){
 }
 loop();
 
-function restartGame(){
-    location.reload();
-}
-
-function homeGame(){
-    location.reload();
-}
+function restartGame(){ location.reload(); }
+function homeGame(){ location.reload(); }
 </script>
 
 </body>
