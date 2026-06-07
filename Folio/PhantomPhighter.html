@@ -11,7 +11,7 @@ body{
     overflow:hidden;
     background:#050510;
     font-family:Arial;
-    color:rgb(255, 255, 255);
+    color:white;
 }
 
 canvas{
@@ -26,16 +26,12 @@ canvas{
     font-size:18px;
 }
 
-#warning{
+#godmode{
     position:absolute;
-    top:50%;
-    left:50%;
-    transform:translate(-50%,-50%);
-    font-size:40px;
-    color:red;
+    top:90px;
+    left:10px;
+    color:lime;
     font-weight:bold;
-    text-shadow:0 0 20px red;
-    pointer-events:none;
 }
 
 #reloadText{
@@ -74,107 +70,183 @@ button{
 <div id="ui">
 Health: <span id="health">100</span><br>
 Score: <span id="score">0</span><br>
-Ammo: <span id="ammo">20</span>
+Ammo: <span id="ammo">20</span><br>
+Time: <span id="timer">00:00</span>
 </div>
 
+<div id="godmode"></div>
 <div id="reloadText"></div>
-<div id="warning"></div>
 
 <div id="gameOverScreen">
     <h1>GAME OVER</h1>
     <p id="finalScore"></p>
-    <button onclick="restartGame()">Restart</button>
-    <button onclick="homeGame()">Home</button>
+    <button onclick="location.reload()">Restart</button>
 </div>
 
 <canvas id="game"></canvas>
 
 <script>
-const canvas=document.getElementById("game");
-const ctx=canvas.getContext("2d");
+    document.getElementById("warning").textContent =
+    isOutOfBounds ? "RETURN TO BATTLEFIELD!" : "";
+    
+    function checkBounds(){
 
-canvas.width=window.innerWidth;
-canvas.height=window.innerHeight;
+    if(
+        player.x < 0 ||
+        player.x > canvas.width ||
+        player.y < 0 ||
+        player.y > canvas.height
+    ){
+        isOutOfBounds = true;
+        outOfBoundsTime += 1;
+    } else {
+        isOutOfBounds = false;
+        outOfBoundsTime = 0;
+    }
 
-let score=0;
-let gameOver=false;
+    // 180 frames ≈ 3 seconds (at 60fps)
+    if(outOfBoundsTime >= 180){
+        if(!infiniteHealth){
+            player.health -= 2;
+            healthUI.textContent = Math.floor(player.health);
+        }
+        outOfBoundsTime = 0; // reset after damage
+    }
+}
 
-let ammo=20;
-let maxAmmo=20;
-let reloading=false;
+    let outOfBoundsTime = 0;
+let isOutOfBounds = false;
 
-let keys={};
-let bullets=[];
-let phantoms=[];
+/* ================= SETUP ================= */
 
-const player={
-    x:canvas.width/2,
-    y:canvas.height/2,
-    size:20,
-    speed:5,
-    health:100
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+/* ================= VARIABLES ================= */
+
+let score = 0;
+let gameOver = false;
+
+let ammo = 20;
+let maxAmmo = 20;
+let reloading = false;
+
+let keys = {};
+let bullets = [];
+let phantoms = [];
+
+let infiniteHealth = false;
+
+const player = {
+    x: canvas.width/2,
+    y: canvas.height/2,
+    size: 20,
+    speed: 5,
+    health: 100
 };
 
-let mouse={x:0,y:0};
+let mouse = {x:0,y:0};
 
-const healthUI=document.getElementById("health");
-const scoreUI=document.getElementById("score");
-const ammoUI=document.getElementById("ammo");
-const reloadText=document.getElementById("reloadText");
+const healthUI = document.getElementById("health");
+const scoreUI = document.getElementById("score");
+const ammoUI = document.getElementById("ammo");
+const timerUI = document.getElementById("timer");
+const reloadText = document.getElementById("reloadText");
 
-document.addEventListener("keydown",e=>{
-    keys[e.key.toLowerCase()]=true;
-    if(e.key.toLowerCase()==="r") reload();
+/* ================= TIMER ================= */
+
+let startTime = Date.now();
+
+function updateTimer(){
+    if(gameOver) return;
+
+    let elapsed = Math.floor((Date.now() - startTime) / 1000);
+
+    let m = Math.floor(elapsed / 60);
+    let s = elapsed % 60;
+
+    timerUI.textContent =
+        String(m).padStart(2,"0") + ":" +
+        String(s).padStart(2,"0");
+}
+
+/* ================= INPUT ================= */
+
+document.addEventListener("keydown", e=>{
+    keys[e.key.toLowerCase()] = true;
+
+    if(e.key.toLowerCase() === "r") reload();
+
+    if(e.key.toLowerCase() === "m"){
+        infiniteHealth = !infiniteHealth;
+    }
 });
 
-document.addEventListener("keyup",e=>{
-    keys[e.key.toLowerCase()]=false;
+document.addEventListener("keyup", e=>{
+    keys[e.key.toLowerCase()] = false;
 });
 
-canvas.addEventListener("mousemove",e=>{
-    mouse.x=e.clientX;
-    mouse.y=e.clientY;
+canvas.addEventListener("mousemove", e=>{
+    mouse.x = e.clientX;
+    mouse.y = e.clientY;
 });
 
-canvas.addEventListener("click",shoot);
+canvas.addEventListener("click", shoot);
+
+/* ================= GAME ================= */
 
 function shoot(){
-
-    if(gameOver || reloading) return;
-    if(ammo<=0) return;
+    if(gameOver || reloading || ammo <= 0) return;
 
     ammo--;
-    ammoUI.textContent=ammo;
+    ammoUI.textContent = ammo;
 
-    const angle=Math.atan2(mouse.y-player.y,mouse.x-player.x);
+    let angle = Math.atan2(mouse.y-player.y, mouse.x-player.x);
 
     bullets.push({
-        x:player.x,
-        y:player.y,
-        dx:Math.cos(angle)*10,
-        dy:Math.sin(angle)*10,
-        size:5
+        x: player.x,
+        y: player.y,
+        dx: Math.cos(angle)*10,
+        dy: Math.sin(angle)*10,
+        size: 5
     });
 }
 
 function reload(){
+    if(reloading || ammo === maxAmmo || gameOver) return;
 
-    if(reloading || ammo===maxAmmo || gameOver) return;
-
-    reloading=true;
-    reloadText.textContent="Reloading...";
+    reloading = true;
+    reloadText.textContent = "Reloading...";
 
     setTimeout(()=>{
-        ammo=maxAmmo;
-        ammoUI.textContent=ammo;
-        reloading=false;
-        reloadText.textContent="";
+        ammo = maxAmmo;
+        ammoUI.textContent = ammo;
+        reloading = false;
+        reloadText.textContent = "";
     },1500);
 }
 
-function spawnPhantom(){
+/* ================= DIFFICULTY ================= */
 
-    let side=Math.floor(Math.random()*4);
+let difficultyLevel = 1;
+
+checkBounds();
+
+function updateDifficulty(){
+    let elapsed = Math.floor((Date.now() - startTime) / 1000);
+
+    if(elapsed >= 600) difficultyLevel = 3;
+    else if(elapsed >= 300) difficultyLevel = 2;
+    else difficultyLevel = 1;
+}
+
+/* ================= SPAWN ================= */
+
+function spawnPhantom(){
+    let side = Math.floor(Math.random()*4);
     let x,y;
 
     if(side===0){x=Math.random()*canvas.width;y=-50;}
@@ -185,93 +257,76 @@ function spawnPhantom(){
     phantoms.push({
         x,y,
         size:25,
-        speed:1+Math.random()*2,
-        phase:Math.random()>0.5,
-        visible:true,
-        phaseTimer:0
+        speed:(1+Math.random()*2) * difficultyLevel
     });
 }
 
 setInterval(spawnPhantom,1000);
 
+/* ================= UPDATE ================= */
+
 function update(){
 
     if(gameOver) return;
 
-    if(keys["w"]) player.y-=player.speed;
-    if(keys["s"]) player.y+=player.speed;
-    if(keys["a"]) player.x-=player.speed;
-    if(keys["d"]) player.x+=player.speed;
+    updateTimer();
+    updateDifficulty();
 
-    let speedMult=score>=500?2:1;
-    let phaseMult=score>=500?2:1;
+    if(keys["w"]) player.y -= player.speed;
+    if(keys["s"]) player.y += player.speed;
+    if(keys["a"]) player.x -= player.speed;
+    if(keys["d"]) player.x += player.speed;
 
     bullets.forEach((b,i)=>{
-        b.x+=b.dx;
-        b.y+=b.dy;
-        if(b.x<0||b.x>canvas.width||b.y<0||b.y>canvas.height) bullets.splice(i,1);
+        b.x += b.dx;
+        b.y += b.dy;
+        if(b.x<0||b.x>canvas.width||b.y<0||b.y>canvas.height)
+            bullets.splice(i,1);
     });
 
     phantoms.forEach((p,pi)=>{
 
-        let angle=Math.atan2(player.y-p.y,player.x-p.x);
+        let angle = Math.atan2(player.y-p.y, player.x-p.x);
 
-        p.x+=Math.cos(angle)*p.speed*speedMult;
-        p.y+=Math.sin(angle)*p.speed*speedMult;
+        p.x += Math.cos(angle)*p.speed;
+        p.y += Math.sin(angle)*p.speed;
 
-        if(p.phase){
-            p.phaseTimer+=phaseMult;
-            if(p.phaseTimer>120){
-                p.visible=!p.visible;
-                p.phaseTimer=0;
+        let dx = player.x - p.x;
+        let dy = player.y - p.y;
+
+        if(Math.sqrt(dx*dx+dy*dy) < player.size + p.size){
+
+            if(!infiniteHealth){
+                player.health -= 0.3;
+                healthUI.textContent = Math.floor(player.health);
             }
-        }
 
-        bullets.forEach((b,bi)=>{
-            let dx=b.x-p.x;
-            let dy=b.y-p.y;
-            if(Math.sqrt(dx*dx+dy*dy)<p.size+b.size && p.visible){
-                bullets.splice(bi,1);
-                phantoms.splice(pi,1);
-                score+=10;
-                scoreUI.textContent=score;
-            }
-        });
+            if(!infiniteHealth && player.health <= 0 && !gameOver){
+                gameOver = true;
 
-        let dx=player.x-p.x;
-        let dy=player.y-p.y;
+                document.getElementById("finalScore").innerHTML =
+                    "Score: " + score +
+                    "<br>Survived: " + timerUI.textContent;
 
-        if(Math.sqrt(dx*dx+dy*dy)<player.size+p.size){
-
-            player.health-=0.3;
-            healthUI.textContent=Math.floor(player.health);
-
-            if(player.health<=0 && !gameOver){
-                gameOver=true;
-                document.getElementById("finalScore").textContent="Score: "+score;
                 document.getElementById("gameOverScreen").style.display="flex";
             }
         }
     });
 
-    document.getElementById("reloadText").textContent =
-        reloading ? "Reloading..." : "";
+    document.getElementById("godmode").textContent =
+        infiniteHealth ? "INFINITE HEALTH ON (Michael)" : "";
 
-    if(score>=500 && !window.warned){
-        window.warned=true;
-        document.getElementById("warning").textContent="THE PHANTOMS HAVE EVOLVED!";
-        setTimeout(()=>{
-            document.getElementById("warning").textContent="";
-        },3000);
-    }
+    reloadText.textContent = reloading ? "Reloading..." : "";
 }
 
-function draw(){
+/* ================= DRAW ================= */
 
+function draw(){
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
+    let angle = Math.atan2(mouse.y-player.y, mouse.x-player.x);
+
     ctx.save();
-    let angle=Math.atan2(mouse.y-player.y,mouse.x-player.x);
     ctx.translate(player.x,player.y);
     ctx.rotate(angle);
 
@@ -281,6 +336,7 @@ function draw(){
     ctx.lineTo(-15,-12);
     ctx.lineTo(-15,12);
     ctx.fill();
+
     ctx.restore();
 
     ctx.fillStyle="yellow";
@@ -290,15 +346,15 @@ function draw(){
         ctx.fill();
     });
 
+    ctx.fillStyle="white";
     phantoms.forEach(p=>{
-        ctx.globalAlpha=p.visible?1:0.2;
-        ctx.fillStyle="white";
         ctx.beginPath();
         ctx.arc(p.x,p.y,p.size,0,Math.PI*2);
         ctx.fill();
-        ctx.globalAlpha=1;
     });
 }
+
+/* ================= LOOP ================= */
 
 function loop(){
     update();
@@ -307,13 +363,6 @@ function loop(){
 }
 loop();
 
-function restartGame(){
-    location.reload();
-}
-
-function homeGame(){
-    location.reload();
-}
 </script>
 
 </body>
