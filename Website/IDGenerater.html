@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Timekeeper ID Generator</title>
+
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Segoe UI, sans-serif;
+}
+
+body{
+    background:linear-gradient(135deg,#050816,#0a1830,#111827);
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    color:white;
+    padding:20px;
+}
+
+.container{
+    width:100%;
+    max-width:800px;
+    background:rgba(255,255,255,0.05);
+    backdrop-filter:blur(12px);
+    border:1px solid rgba(0,255,255,0.2);
+    border-radius:20px;
+    padding:30px;
+    box-shadow:0 0 30px rgba(0,255,255,0.2);
+}
+
+h1{
+    text-align:center;
+    margin-bottom:20px;
+    color:#4ef2ff;
+    text-shadow:0 0 15px #4ef2ff;
+}
+
+.subtitle{
+    text-align:center;
+    color:#c7d2fe;
+    margin-bottom:25px;
+}
+
+.avatar-grid{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:10px;
+    margin-top:10px;
+}
+
+.avatar{
+    font-size:40px;
+    background:rgba(255,255,255,0.08);
+    border:2px solid transparent;
+    border-radius:12px;
+    padding:10px;
+    cursor:pointer;
+    transition:.3s;
+    text-align:center;
+}
+
+.avatar:hover{ transform:scale(1.05); }
+
+.avatar.selected{
+    border-color:#4ef2ff;
+    box-shadow:0 0 15px #4ef2ff;
+}
+
+.id-card{
+    background:rgba(0,0,0,0.35);
+    border-radius:15px;
+    padding:25px;
+    margin-top:20px;
+}
+
+.agent-avatar{
+    text-align:center;
+    font-size:70px;
+    margin-bottom:15px;
+}
+
+.info{
+    display:grid;
+    gap:12px;
+}
+
+.info-item{
+    background:rgba(255,255,255,0.05);
+    padding:12px;
+    border-radius:10px;
+}
+
+.label{
+    color:#4ef2ff;
+    font-weight:bold;
+}
+
+button{
+    width:100%;
+    margin-top:15px;
+    padding:15px;
+    border:none;
+    border-radius:12px;
+    font-size:1rem;
+    font-weight:bold;
+    cursor:pointer;
+    color:white;
+    background:linear-gradient(90deg,#00bcd4,#3f51b5);
+    transition:.3s;
+}
+
+button:hover{
+    transform:translateY(-2px);
+    box-shadow:0 0 20px rgba(78,242,255,.6);
+}
+
+.footer{
+    text-align:center;
+    margin-top:15px;
+    color:#9ca3af;
+    font-size:0.9rem;
+}
+
+/* 🖨️ PRINT MODE */
+@media print {
+    body{
+        background:white;
+        color:black;
+        display:block;
+    }
+
+    .subtitle, .avatar-grid, button, .footer{
+        display:none !important;
+    }
+
+    .container{
+        box-shadow:none;
+        border:none;
+        background:white;
+    }
+
+    .id-card{
+        background:white;
+        color:black;
+        border:1px solid #000;
+    }
+
+    .label{
+        color:black;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>⏳ Timekeeper ID Generator</h1>
+
+    <p class="subtitle">Select an avatar and generate your identity.</p>
+
+    <div class="avatar-grid">
+        <div class="avatar selected">🤖</div>
+        <div class="avatar">🦾</div>
+        <div class="avatar">🛸</div>
+        <div class="avatar">⚡</div>
+        <div class="avatar">🧠</div>
+        <div class="avatar">👁️</div>
+        <div class="avatar">🌌</div>
+        <div class="avatar">⌛</div>
+    </div>
+
+    <div class="id-card">
+
+        <div class="agent-avatar" id="displayAvatar">🤖</div>
+
+        <div class="info">
+            <div class="info-item"><span class="label">Codename:</span> <span id="codename"></span></div>
+            <div class="info-item"><span class="label">Ability:</span> <span id="ability"></span></div>
+            <div class="info-item"><span class="label">Time Period:</span> <span id="period"></span></div>
+            <div class="info-item"><span class="label">Threat Level:</span> <span id="threat"></span></div>
+        </div>
+
+        <button onclick="generateAgent()">Generate New Agent</button>
+        <button onclick="window.print()">🖨️ Print ID Card</button>
+
+    </div>
+
+    <div class="footer">Timekeeper Agency Database v2.0</div>
+
+</div>
+
+<script>
+
+const codenames = [
+"Time Phantom"
+];
+
+const abilities = [
+"Temporal Shield","Time Freeze","Future Vision","Paradox Detection","Chrono Dash",
+"Timeline Repair","Quantum Cloak","Reality Shift","Time Loop Control","Memory Restoration"
+];
+
+const periods = [
+"Ancient Egypt","Medieval Europe","Year 2099","Year 3125","Jurassic Era",
+"Golden Age of Space Travel","Victorian London","Year 5000","Lost Atlantis","First Lunar Colony"
+];
+
+const threats = ["Low","Moderate","Elevated","High","Extreme","Critical"];
+
+const avatars = document.querySelectorAll(".avatar");
+let selectedAvatar = "🤖";
+
+avatars.forEach(a=>{
+    a.addEventListener("click",()=>{
+        avatars.forEach(x=>x.classList.remove("selected"));
+        a.classList.add("selected");
+        selectedAvatar = a.textContent;
+        document.getElementById("displayAvatar").textContent = selectedAvatar;
+    });
+});
+
+function randomItem(arr){
+    return arr[Math.floor(Math.random()*arr.length)];
+}
+
+function generateAgent(){
+    document.getElementById("codename").textContent = randomItem(codenames);
+    document.getElementById("ability").textContent = randomItem(abilities);
+    document.getElementById("period").textContent = randomItem(periods);
+    document.getElementById("threat").textContent = randomItem(threats);
+    document.getElementById("displayAvatar").textContent = selectedAvatar;
+}
+
+generateAgent();
+
+</script>
+
+</body>
+</html>
